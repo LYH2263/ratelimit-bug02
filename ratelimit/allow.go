@@ -78,7 +78,9 @@ func (l *Limiter) AllowCtx(ctx context.Context, key string) (bool, error) {
 	}
 	ok, _ := l.AllowN(key, 1)
 	if !ok {
-		return false, fmt.Errorf("quota exhausted for %q", key)
+		// 必须 wrap ErrExhausted，否则调用方 errors.Is(err, ErrExhausted) 失败，
+		// 只能拿到裸字符串，无法区分限流与内部错误。
+		return false, fmt.Errorf("%w for %q", ErrExhausted, key)
 	}
 	if err := ctx.Err(); err != nil {
 		l.credit(key, 1)

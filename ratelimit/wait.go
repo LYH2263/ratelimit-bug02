@@ -2,6 +2,7 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -20,7 +21,9 @@ func (l *Limiter) Wait(ctx context.Context, key string) error {
 		if ok {
 			return nil
 		}
-		if err != nil {
+		// 配额耗尽是正常限流，应继续等待令牌补充，而非上送成返回值；
+		// 否则网关把限流当作内部错误，无法区分二者。仅内部错误才终止。
+		if err != nil && !errors.Is(err, ErrExhausted) {
 			return err
 		}
 		select {
